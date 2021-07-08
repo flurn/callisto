@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"time"
 
 	"callisto/config"
 	"callisto/logger"
@@ -59,7 +61,6 @@ func NewKafkaClient(kafkaConfig config.KafkaConfig) *kafka {
 	if err != nil {
 		panic(err)
 	}
-
 	return &kafka{producer: producer}
 }
 
@@ -77,4 +78,49 @@ func confluentKafkaConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
 		"batch.num.messages": kafkaConfig.MessageBatchSize(),
 		"message.timeout.ms": kafkaConfig.MessageTimeoutMs(),
 	}
+}
+
+func CreateTopic(topicName string, kafkaConfig config.KafkaConfig) {
+
+	adminClient, err := k.NewAdminClient(confluentKafkaConfig(kafkaConfig))
+
+	if err != nil {
+		fmt.Printf("Failed to create Admin client: %s\n", err)
+		os.Exit(1)
+	}
+
+	// the Admin call blocks waiting for a result.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Create topics on cluster.
+	// Set Admin options to wait for the operation to finish (or at most 60s)
+	maxDuration, err := time.ParseDuration("60s")
+	if err != nil {
+		panic("Panic: time.ParseDuration(60s)")
+	}
+
+	results, err := adminClient.CreateTopics(ctx,
+		[]k.TopicSpecification{{
+			Topic:             topicName,
+			NumPartitions:     1,
+			ReplicationFactor: 2}},
+		k.SetAdminOperationTimeout(maxDuration))
+
+	if err != nil {
+		fmt.Printf("Problem during the topic creation: %v\n", err)
+		os.Exit(1)
+	}
+
+	for _, result := range results {
+		if result.Error.Code() != k.ErrNoError &&
+			result.Error.Code() != k.ErrTopicAlreadyExists {
+			fmt.Printf("Topic creation failed for %s: %v",
+				result.Topic, result.Error.String())
+			os.Exit(1)
+		}
+	}
+
+	adminClient.Close()
+
 }

@@ -7,7 +7,6 @@ import (
 
 func InitApp() {
 	logger.SetupLogger()
-	//kafka.init(k.config())
 	instrumentation.InitSentry()
 }
 

@@ -5,6 +5,7 @@
 *.so
 *.dylib
 .idea
+callisto
 
 # Test binary, built with `go test -c`
 *.test

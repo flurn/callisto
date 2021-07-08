@@ -12,3 +12,9 @@ type Client interface {
 func GetClient() Client {
 	return NewKafkaClient(config.Kafka())
 }
+
+func CreateTopics(topicNames []string, kafkaConfig config.KafkaConfig) {
+	for _, topicName := range topicNames {
+		CreateTopic(topicName, kafkaConfig)
+	}
+}
