@@ -125,3 +125,23 @@ func newKafkaConfig() KafkaConfig {
 	return kc
 }
 
+func consumerASWorkerConfig() KafkaConfig {
+	kc := KafkaConfig{
+		brokerList:                mustGetString("CONS_KAFKA_BROKER_LIST"),
+		bulkPublishTopic:          mustGetString("CONS_KAFKA_BULK_PUBLISH_TOPIC"),
+		internalPublishTopic:      mustGetString("CONS_KAFKA_INTERNAL_PUBLISH_TOPIC"),
+		maxConnections:            mustGetInt("CONS_KAFKA_MAX_CONNECTIONS"),
+		transactionalPublishTopic: mustGetString("CONS_KAFKA_TRANSACTIONAL_PUBLISH_TOPIC"),
+		backOff:                   mustGetInt("CONS_KAFKA_RETRY_IN_MILLISECONDS"),
+		consumeOffset:             mustGetString("CONS_KAFKA_CONSUME_OFFSET"),
+		consumerGroup:             mustGetString("CONS_KAFKA_CONSUMER_GROUP"),
+		workers:                   mustGetInt("CONS_KAFKA_WORKER_COUNT"),
+		lingerMs:                  mustGetInt("CONS_KAFKA_LINGER_MS"),
+		retryBackOffMs:            mustGetInt("CONS_KAFKA_RETRY_BACKOFF_MS"),
+		messageTimeoutMs:          mustGetInt("CONS_KAFKA_MESSAGE_TIMEOUT_MS"),
+		messageBatchSize:          mustGetInt("CONS_KAFKA_PUBLISH_BATCH_SIZE"),
+	}
+
+	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic}
+	return kc
+}

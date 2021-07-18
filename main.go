@@ -25,6 +25,18 @@ func main() {
 				return nil
 			},
 		},
+		{
+			Name:        "consumer-worker",
+			Description: "Run consumer as worker",
+			Action: func(c *cli.Context) error {
+				config.Load(config.ConsumerAsWorker)
+				app.InitApp()
+				defer app.StopApp()
+
+				server.StartConsumerASWorker()
+				return nil
+			},
+		},
 	}
 
 	if err := clientApp.Run(os.Args); err != nil {
