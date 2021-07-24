@@ -1,7 +1,7 @@
 package config
 
 import (
-	"callisto/types"
+	"github.com/flurn/callisto/types"
 	"context"
 )
 

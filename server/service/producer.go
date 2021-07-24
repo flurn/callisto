@@ -1,6 +1,6 @@
 package service
 
-import "callisto/kafka"
+import "github.com/flurn/callisto/kafka"
 
 type Service struct {
 	kafka kafka.Client

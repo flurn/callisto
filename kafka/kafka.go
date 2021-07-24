@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"callisto/config"
-	"callisto/logger"
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/logger"
 	k "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/getsentry/raven-go"
 )

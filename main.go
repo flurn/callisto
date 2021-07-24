@@ -1,9 +1,9 @@
 package main
 
 import (
-	"callisto/app"
-	"callisto/config"
-	"callisto/server"
+	"github.com/flurn/callisto/app"
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/server"
 	"github.com/urfave/cli"
 	"os"
 )

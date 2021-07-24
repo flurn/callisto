@@ -3,8 +3,8 @@ package instrumentation
 import (
 	"log"
 
-	"callisto/config"
-	"callisto/logger"
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/logger"
 	raven "github.com/getsentry/raven-go"
 )
 

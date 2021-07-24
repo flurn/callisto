@@ -1,7 +1,7 @@
 package service
 
 import (
-	"callisto/logger"
+	"github.com/flurn/callisto/logger"
 	"github.com/golang/protobuf/proto"
 	"net/http"
 )

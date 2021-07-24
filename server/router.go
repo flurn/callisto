@@ -1,7 +1,7 @@
 package server
 
 import (
-	producerService "callisto/server/service"
+	producerService "github.com/flurn/callisto/server/service"
 	"github.com/gorilla/mux"
 	"net/http"
 )

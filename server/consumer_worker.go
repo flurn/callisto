@@ -1,9 +1,9 @@
 package server
 
 import (
-	"callisto/config"
-	"callisto/kafka/consumer"
-	"callisto/server/service"
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/kafka/consumer"
+	"github.com/flurn/callisto/server/service"
 	"context"
 	"fmt"
 	"net/http"

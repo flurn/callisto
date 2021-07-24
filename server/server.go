@@ -1,9 +1,9 @@
 package server
 
 import (
-	"callisto/config"
-	"callisto/kafka"
-	producerService "callisto/server/service"
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/kafka"
+	producerService "github.com/flurn/callisto/server/service"
 	"context"
 	"fmt"
 	"github.com/codegangsta/negroni"

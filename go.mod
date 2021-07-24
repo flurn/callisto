@@ -1,4 +1,4 @@
-module callisto
+module github.com/flurn/callisto
 
 go 1.15
 

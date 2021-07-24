@@ -1,7 +1,7 @@
 package kafka
 
 import (
-	"callisto/config"
+	"github.com/flurn/callisto/config"
 	"context"
 )
 

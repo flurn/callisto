@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"callisto/config"
+	"github.com/flurn/callisto/config"
 	"github.com/sirupsen/logrus"
 )
 

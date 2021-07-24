@@ -1,9 +1,9 @@
 package consumer
 
 import (
-	"callisto/config"
-	"callisto/logger"
-	"callisto/retry"
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/logger"
+	"github.com/flurn/callisto/retry"
 	"context"
 	"log"
 	"sync"

@@ -1,8 +1,8 @@
 package app
 
 import (
-	"callisto/instrumentation"
-	"callisto/logger"
+	"github.com/flurn/callisto/instrumentation"
+	"github.com/flurn/callisto/logger"
 )
 
 func InitApp() {
