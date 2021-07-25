@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
+	k "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/flurn/callisto/config"
 	"github.com/flurn/callisto/logger"
-	k "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/getsentry/raven-go"
 )
 
@@ -104,7 +104,7 @@ func CreateTopic(topicName string, kafkaConfig config.KafkaConfig) {
 		[]k.TopicSpecification{{
 			Topic:             topicName,
 			NumPartitions:     1,
-			ReplicationFactor: 2}},
+			ReplicationFactor: 1}},
 		k.SetAdminOperationTimeout(maxDuration))
 
 	if err != nil {
