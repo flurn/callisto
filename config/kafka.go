@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/flurn/callisto/types"
 	"context"
+	"github.com/flurn/callisto/types"
 )
 
 const (
