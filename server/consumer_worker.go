@@ -1,16 +1,15 @@
 package server
 
 import (
-	"github.com/flurn/callisto/config"
-	"github.com/flurn/callisto/kafka/consumer"
-	"github.com/flurn/callisto/server/service"
 	"context"
 	"fmt"
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/kafka/consumer"
 	"net/http"
 	"sync"
 )
 
-func StartConsumerASWorker() {
+func StartConsumerASWorker(fn func(msg []byte) error) {
 
 	go func() {
 		fmt.Println("Starting server on port", config.ConsumerASWorkerPort())
@@ -30,8 +29,7 @@ func StartConsumerASWorker() {
 		for wID := 0; wID < consumerAsWorkerConfig.Workers(); wID++ {
 			kafkaConsumer := consumer.NewKafkaConsumer(topic, consumerAsWorkerConfig)
 			defer kafkaConsumer.Close()
-			processFn := service.WriteToDatastore()
-			go kafkaConsumer.Consume(ctx, wID, processFn, &wg)
+			go kafkaConsumer.Consume(ctx, wID, fn, &wg)
 			wg.Add(1)
 		}
 	}

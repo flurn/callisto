@@ -1,10 +1,10 @@
 package consumer
 
 import (
+	"context"
 	"github.com/flurn/callisto/config"
 	"github.com/flurn/callisto/logger"
 	"github.com/flurn/callisto/retry"
-	"context"
 	"log"
 	"sync"
 	"time"
@@ -94,7 +94,7 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 	}
 }
 
-func (c *Consumer) Consume(ctx context.Context, workerID int, fn processFn, wg *sync.WaitGroup) {
+func (c *Consumer) Consume(ctx context.Context, workerID int, fn func(msg []byte) error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	msg, ack := c.spawnReaderCommitter(ctx)
 	logger := logger.GetLogger()
@@ -103,7 +103,7 @@ func (c *Consumer) Consume(ctx context.Context, workerID int, fn processFn, wg *
 	c.supervisor.Stop()
 }
 
-func processMessage(ctx context.Context, fn processFn, msg <-chan *k.Message, ack chan<- *k.Message) {
+func processMessage(ctx context.Context, fn func(msg []byte) error, msg <-chan *k.Message, ack chan<- *k.Message) {
 	tick := time.NewTicker(time.Duration(1000/config.ConsumerMessagesToProcessPSec()) * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -117,7 +117,7 @@ func processMessage(ctx context.Context, fn processFn, msg <-chan *k.Message, ac
 	}
 }
 
-func runFuncTillDone(fn processFn, msg *k.Message, ack chan<- *k.Message) {
+func runFuncTillDone(fn func(msg []byte) error, msg *k.Message, ack chan<- *k.Message) {
 	backoff := retry.NewExponentialBackoff(initialTimeout, maxTimeout, exponentFactor)
 	for {
 		err := fn(msg.Value)
