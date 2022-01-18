@@ -1,12 +1,12 @@
 package server
 
 import (
-	"github.com/flurn/callisto/config"
-	"github.com/flurn/callisto/kafka"
-	producerService "github.com/flurn/callisto/server/service"
 	"context"
 	"fmt"
 	"github.com/codegangsta/negroni"
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/kafka"
+	producerService "github.com/flurn/callisto/server/service"
 	"log"
 	"net/http"
 	"os"
@@ -18,11 +18,12 @@ import (
 func StartAPIServer() {
 	server := negroni.New(negroni.NewRecovery())
 	//Creates Topic while startup or ignore if already created
-	kafka.CreateTopics([]string{"", "s"}, config.Kafka())
+	kafka.CreateTopics([]string{"batch_created"}, config.Kafka())
 
 	client := kafka.GetClient()
 
 	service := producerService.NewService(client)
+
 	r := router(service)
 	server.UseHandler(r)
 

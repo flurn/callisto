@@ -27,6 +27,16 @@ type KafkaConfig struct {
 	retryBackOffMs            int
 	messageBatchSize          int
 	messageTimeoutMs          int
+	username                  string // confluent api key
+	password                  string // confluent api secret
+}
+
+func (kc *KafkaConfig) Username() string {
+	return kc.username
+}
+
+func (kc *KafkaConfig) Password() string {
+	return kc.password
 }
 
 func (kc KafkaConfig) Topics() []string {
@@ -106,6 +116,8 @@ func (kc KafkaConfig) KafkaPublishTopic(ctx context.Context) string {
 
 func newKafkaConfig() KafkaConfig {
 	kc := KafkaConfig{
+		username:                  mustGetString("KAFKA_CLUSTER_USERNAME"),
+		password:                  mustGetString("KAFKA_CLUSTER_PASSWORD"),
 		brokerList:                mustGetString("KAFKA_BROKER_LIST"),
 		bulkPublishTopic:          mustGetString("KAFKA_BULK_PUBLISH_TOPIC"),
 		internalPublishTopic:      mustGetString("KAFKA_INTERNAL_PUBLISH_TOPIC"),
@@ -127,6 +139,8 @@ func newKafkaConfig() KafkaConfig {
 
 func consumerASWorkerConfig() KafkaConfig {
 	kc := KafkaConfig{
+		username:                  mustGetString("KAFKA_CLUSTER_USERNAME"),
+		password:                  mustGetString("KAFKA_CLUSTER_PASSWORD"),
 		brokerList:                mustGetString("CONS_KAFKA_BROKER_LIST"),
 		bulkPublishTopic:          mustGetString("CONS_KAFKA_BULK_PUBLISH_TOPIC"),
 		internalPublishTopic:      mustGetString("CONS_KAFKA_INTERNAL_PUBLISH_TOPIC"),
@@ -142,6 +156,6 @@ func consumerASWorkerConfig() KafkaConfig {
 		messageBatchSize:          mustGetInt("CONS_KAFKA_PUBLISH_BATCH_SIZE"),
 	}
 
-	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic}
+	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic, "batch_created"}
 	return kc
 }

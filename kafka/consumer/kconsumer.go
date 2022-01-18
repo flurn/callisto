@@ -64,6 +64,10 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 	consumer, err := k.NewConsumer(&k.ConfigMap{
 		"bootstrap.servers":       kafkaConfigProperty.BrokerList(),
 		"group.id":                kafkaConfigProperty.ConsumerGroup(),
+		"security.protocol":       "SASL_SSL",
+		"sasl.mechanisms":         "PLAIN",
+		"sasl.username":           kafkaConfigProperty.Username(),
+		"sasl.password":           kafkaConfigProperty.Password(),
 		"enable.auto.commit":      false,
 		"auto.offset.reset":       offset,
 		"socket.keepalive.enable": true,
@@ -97,8 +101,8 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 func (c *Consumer) Consume(ctx context.Context, workerID int, fn func(msg []byte) error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	msg, ack := c.spawnReaderCommitter(ctx)
-	logger := logger.GetLogger()
-	logger.Infof("Topic: %s group: %s started kafka consumer: %d", c.topicName, c.group, workerID)
+	//logger := logger.GetLogger()
+	//logger.Infof("Topic: %s group: %s started kafka consumer: %d", c.topicName, c.group, workerID)
 	processMessage(ctx, fn, msg, ack)
 	c.supervisor.Stop()
 }
@@ -139,7 +143,7 @@ func (r *kafkaReader) Serve() {
 		default:
 			message, err := r.consumer.ReadMessage(-1)
 			if err != nil {
-				logger.Errorf("kafka consumer failure %v", err)
+				//logger.Errorf("kafka consumer failure %v", err)
 				continue
 			}
 

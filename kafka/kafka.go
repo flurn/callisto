@@ -69,10 +69,14 @@ func confluentKafkaConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
 		"bootstrap.servers":       kafkaConfig.BrokerList(),
 		"socket.keepalive.enable": kafkaConfig.KeepAlive(),
 		"client.id":               "app_name",
+		"security.protocol":       "SASL_SSL",
+		"sasl.mechanisms":         "PLAIN",
 		"api.version.request":     "true",
 		"default.topic.config": k.ConfigMap{
 			"partitioner": "consistent_random",
 		},
+		"sasl.username":      kafkaConfig.Username(),
+		"sasl.password":      kafkaConfig.Password(),
 		"linger.ms":          kafkaConfig.LingerMs(),
 		"retry.backoff.ms":   kafkaConfig.RetryBackoffMs(),
 		"batch.num.messages": kafkaConfig.MessageBatchSize(),
@@ -104,7 +108,7 @@ func CreateTopic(topicName string, kafkaConfig config.KafkaConfig) {
 		[]k.TopicSpecification{{
 			Topic:             topicName,
 			NumPartitions:     1,
-			ReplicationFactor: 1}},
+			ReplicationFactor: 3}},
 		k.SetAdminOperationTimeout(maxDuration))
 
 	if err != nil {

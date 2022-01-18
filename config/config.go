@@ -74,7 +74,6 @@ const (
 func Load(appType ApplicationType) {
 	viper.SetDefault("APP_PORT", "8080")
 	viper.SetDefault("LOG_LEVEL", "error")
-
 	viper.SetConfigName("application")
 	viper.AddConfigPath("./")
 	viper.AddConfigPath("../")
@@ -83,7 +82,6 @@ func Load(appType ApplicationType) {
 
 	viper.ReadInConfig()
 	viper.AutomaticEnv()
-
 	cfg := Config{
 		port:                 mustGetInt("APP_PORT"),
 		consumerASWorkerPort: mustGetInt("CONSUMER_AS_WORKER_PORT"),
