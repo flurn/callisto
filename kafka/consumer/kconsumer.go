@@ -2,12 +2,13 @@ package consumer
 
 import (
 	"context"
-	"github.com/flurn/callisto/config"
-	"github.com/flurn/callisto/logger"
-	"github.com/flurn/callisto/retry"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/logger"
+	"github.com/flurn/callisto/retry"
 
 	k "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/thejerf/suture"
@@ -101,8 +102,8 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 func (c *Consumer) Consume(ctx context.Context, workerID int, fn func(msg []byte) error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	msg, ack := c.spawnReaderCommitter(ctx)
-	//logger := logger.GetLogger()
-	//logger.Infof("Topic: %s group: %s started kafka consumer: %d", c.topicName, c.group, workerID)
+	logger := logger.GetLogger()
+	logger.Infof("Topic: %s group: %s started kafka consumer: %d", c.topicName, c.group, workerID)
 	processMessage(ctx, fn, msg, ack)
 	c.supervisor.Stop()
 }
