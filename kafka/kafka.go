@@ -84,7 +84,7 @@ func confluentKafkaConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
 	}
 }
 
-func CreateTopic(topicName string, kafkaConfig config.KafkaConfig) {
+func CreateTopic(topicName string, kafkaConfig config.KafkaConfig) error {
 
 	adminClient, err := k.NewAdminClient(confluentKafkaConfig(kafkaConfig))
 
@@ -113,7 +113,7 @@ func CreateTopic(topicName string, kafkaConfig config.KafkaConfig) {
 
 	if err != nil {
 		fmt.Printf("Problem during the topic creation: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	for _, result := range results {
@@ -121,10 +121,10 @@ func CreateTopic(topicName string, kafkaConfig config.KafkaConfig) {
 			result.Error.Code() != k.ErrTopicAlreadyExists {
 			fmt.Printf("Topic creation failed for %s: %v",
 				result.Topic, result.Error.String())
-			os.Exit(1)
+			return result.Error
 		}
 	}
 
 	adminClient.Close()
-
+	return nil
 }
