@@ -134,7 +134,7 @@ func newKafkaConfig() KafkaConfig {
 		messageBatchSize:          mustGetInt("KAFKA_PUBLISH_BATCH_SIZE"),
 	}
 
-	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic}
+	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic, "test_topic"}
 	return kc
 }
 
