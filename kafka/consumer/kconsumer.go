@@ -57,11 +57,6 @@ func (c *Consumer) Close() {
 	}
 }
 
-func moveToDLQ(msg []byte, topicName, groupName string) error {
-
-	return nil
-}
-
 func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) *Consumer {
 
 	offset := latestOffset
