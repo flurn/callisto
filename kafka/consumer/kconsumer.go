@@ -143,7 +143,7 @@ func (c *Consumer) runFuncTillDone(fn func(msg []byte) error, msg *k.Message, ac
 			logger.Errorf("Max retries reached for message: %s", string(msg.Value))
 
 			// move to DLQ
-			err = MoveToDLQ(msg.Value, c.topicName, c.group)
+			err = c.moveToDLQ(msg.Value, c.topicName, c.group)
 			if err != nil {
 				logger.Errorf("Failed to move message to DLQ, err: %v", err)
 				//TODO: send message to slack channel
