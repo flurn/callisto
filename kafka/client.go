@@ -1,8 +1,9 @@
 package kafka
 
 import (
-	"github.com/flurn/callisto/config"
 	"context"
+
+	"github.com/flurn/callisto/config"
 )
 
 type Client interface {

@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+
 	"github.com/flurn/callisto/types"
 )
 
@@ -133,7 +134,7 @@ func newKafkaConfig() KafkaConfig {
 		messageBatchSize:          mustGetInt("KAFKA_PUBLISH_BATCH_SIZE"),
 	}
 
-	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic}
+	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic, "test_topic"}
 	return kc
 }
 
@@ -156,6 +157,6 @@ func consumerASWorkerConfig() KafkaConfig {
 		messageBatchSize:          mustGetInt("CONS_KAFKA_PUBLISH_BATCH_SIZE"),
 	}
 
-	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic, "batch_created"}
+	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic, "batch_created", "test_topic"}
 	return kc
 }

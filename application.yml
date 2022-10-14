@@ -4,7 +4,7 @@ LOG_LEVEL: "info"
 LOG_FORMAT: "text"
 SENTRY_DSN: "dsn"
 SENTRY_ENABLED: false
-KAFKA_BROKER_LIST: "pkc-41p56.asia-south1.gcp.confluent.cloud:9092"
+KAFKA_BROKER_LIST: "pkc-l7pr2.ap-south-1.aws.confluent.cloud:9092"
 KAFKA_BULK_PUBLISH_TOPIC: "sample-message-bulk"
 KAFKA_INTERNAL_PUBLISH_TOPIC: "app-message-internal"
 KAFKA_MAX_CONNECTIONS: 50
@@ -19,7 +19,7 @@ KAFKA_MESSAGE_TIMEOUT_MS: 45000
 KAFKA_PUBLISH_BATCH_SIZE: 10
 CONSUMER_NUM_MESSAGES_PROCESSED_PER_SECOND: 100
 
-CONS_KAFKA_BROKER_LIST: "pkc-41p56.asia-south1.gcp.confluent.cloud:9092"
+CONS_KAFKA_BROKER_LIST: "pkc-l7pr2.ap-south-1.aws.confluent.cloud:9092"
 CONS_KAFKA_BULK_PUBLISH_TOPIC: "demo-message-bulk"
 CONS_KAFKA_INTERNAL_PUBLISH_TOPIC: "message-internal"
 CONS_KAFKA_MAX_CONNECTIONS: 50
