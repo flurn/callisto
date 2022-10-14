@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strconv"
 
 	"github.com/flurn/callisto/app"
@@ -22,8 +23,8 @@ func Test() {
 	defer app.StopApp()
 
 	kafkaConfig := config.Kafka()
-
-	kafka.CreateTopic(topic, kafkaConfig)
+	createDLQ := true
+	kafka.CreateTopic(topic, kafkaConfig, createDLQ)
 
 	kafkaClient := kafka.NewKafkaClient(kafkaConfig)
 	for i := 0; i < 10; i++ {
@@ -34,8 +35,14 @@ func Test() {
 	}
 
 	fn := func(message []byte) error {
+		// just return error for testing exponential backOff
+		if rand.Intn(2) == 1 {
+			return fmt.Errorf("error")
+		}
+
 		fmt.Println(string(message))
 		return nil
 	}
+
 	server.StartConsumerASWorker(fn)
 }

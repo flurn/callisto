@@ -13,6 +13,7 @@ import (
 	"github.com/flurn/callisto/kafka"
 	"github.com/flurn/callisto/logger"
 	"github.com/flurn/callisto/retry"
+	"github.com/flurn/callisto/types"
 )
 
 const (
@@ -43,7 +44,7 @@ type Consumer struct {
 	committer  *kafkaCommitter
 	reader     *kafkaReader
 	supervisor *suture.Supervisor
-	moveToDLQ  func(msg []byte, topicName, groupName string) error
+	moveToDLQ  func(msg []byte) error
 	topicName  string
 	group      string
 }
@@ -100,8 +101,8 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 			context:  context.TODO(),
 			msg:      make(chan *k.Message),
 		},
-		moveToDLQ: func(msg []byte, topicName, groupName string) error {
-			return kafkaClient.Push(context.Background(), msg, topicName+"-dlq")
+		moveToDLQ: func(msg []byte) error {
+			return kafkaClient.Push(context.Background(), msg, topicName+types.DLQ_Postfix)
 		},
 		supervisor: suture.NewSimple(topicName),
 		topicName:  topicName,
@@ -139,11 +140,11 @@ func (c *Consumer) runFuncTillDone(fn func(msg []byte) error, msg *k.Message, ac
 		err := fn(msg.Value)
 
 		// break on max retries
-		if backOff.GetRetryCounter() > maxRetries {
+		if backOff.GetRetryCounter() >= maxRetries {
 			logger.Errorf("Max retries reached for message: %s", string(msg.Value))
 
 			// move to DLQ
-			err = c.moveToDLQ(msg.Value, c.topicName, c.group)
+			err = c.moveToDLQ(msg.Value)
 			if err != nil {
 				logger.Errorf("Failed to move message to DLQ, err: %v", err)
 				//TODO: send message to slack channel

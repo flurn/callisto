@@ -10,6 +10,7 @@ import (
 	k "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/flurn/callisto/config"
 	"github.com/flurn/callisto/logger"
+	"github.com/flurn/callisto/types"
 	"github.com/getsentry/raven-go"
 )
 
@@ -84,9 +85,9 @@ func confluentKafkaConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
 	}
 }
 
-func CreateTopic(topicName string, kafkaConfig config.KafkaConfig) {
-
+func CreateTopic(topicName string, kafkaConfig config.KafkaConfig, createDLQ bool) {
 	adminClient, err := k.NewAdminClient(confluentKafkaConfig(kafkaConfig))
+	defer adminClient.Close()
 
 	if err != nil {
 		fmt.Printf("Failed to create Admin client: %s\n", err)
@@ -125,6 +126,7 @@ func CreateTopic(topicName string, kafkaConfig config.KafkaConfig) {
 		}
 	}
 
-	adminClient.Close()
-
+	if createDLQ {
+		CreateTopic(topicName+types.DLQ_Postfix, kafkaConfig, false)
+	}
 }

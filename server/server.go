@@ -18,7 +18,7 @@ import (
 func StartAPIServer() {
 	server := negroni.New(negroni.NewRecovery())
 	//Creates Topic while startup or ignore if already created
-	kafka.CreateTopics([]string{"batch_created"}, config.Kafka())
+	kafka.CreateTopics([]string{"batch_created"}, config.Kafka(), true)
 
 	client := kafka.GetClient()
 
