@@ -162,11 +162,6 @@ func (c *Consumer) runFuncTillDone(fn func(msg []byte) error, msg *k.Message, ac
 	ack <- msg
 }
 
-func MoveToDLQ(msg []byte, topicName, groupName string) error {
-
-	return nil
-}
-
 func (r *kafkaReader) Serve() {
 	for {
 		select {
