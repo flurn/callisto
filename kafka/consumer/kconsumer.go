@@ -6,12 +6,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flurn/callisto/config"
-	"github.com/flurn/callisto/logger"
-	"github.com/flurn/callisto/retry"
-
 	k "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/thejerf/suture"
+
+	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/kafka"
+	"github.com/flurn/callisto/logger"
+	"github.com/flurn/callisto/retry"
 )
 
 const (
@@ -42,6 +43,7 @@ type Consumer struct {
 	committer  *kafkaCommitter
 	reader     *kafkaReader
 	supervisor *suture.Supervisor
+	moveToDLQ  func(msg []byte, topicName, groupName string) error
 	topicName  string
 	group      string
 }
@@ -55,6 +57,11 @@ func (c *Consumer) Close() {
 	}
 }
 
+func moveToDLQ(msg []byte, topicName, groupName string) error {
+
+	return nil
+}
+
 func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) *Consumer {
 
 	offset := latestOffset
@@ -62,7 +69,7 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 		offset = oldestOffset
 	}
 
-	consumer, err := k.NewConsumer(&k.ConfigMap{
+	configMap := &k.ConfigMap{
 		"bootstrap.servers":       kafkaConfigProperty.BrokerList(),
 		"group.id":                kafkaConfigProperty.ConsumerGroup(),
 		"security.protocol":       "SASL_SSL",
@@ -73,7 +80,9 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 		"auto.offset.reset":       offset,
 		"socket.keepalive.enable": true,
 		"retry.backoff.ms":        time.Duration(kafkaConfigProperty.BackOff()),
-	})
+	}
+
+	consumer, err := k.NewConsumer(configMap)
 	if err != nil {
 		log.Fatalf(logFormat, "Error to start consumer", err)
 	}
@@ -81,6 +90,9 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 	if err = consumer.SubscribeTopics([]string{topicName}, nil); err != nil {
 		log.Fatalf(logFormat, "Error to subscribe topic", err)
 	}
+
+	// create producer
+	kafkaClient := kafka.NewKafkaClient(config.Kafka())
 
 	return &Consumer{
 		committer: &kafkaCommitter{
@@ -93,6 +105,9 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 			context:  context.TODO(),
 			msg:      make(chan *k.Message),
 		},
+		moveToDLQ: func(msg []byte, topicName, groupName string) error {
+			return kafkaClient.Push(context.Background(), msg, topicName+"-dlq")
+		},
 		supervisor: suture.NewSimple(topicName),
 		topicName:  topicName,
 		group:      kafkaConfigProperty.ConsumerGroup(),
@@ -104,35 +119,57 @@ func (c *Consumer) Consume(ctx context.Context, workerID int, fn func(msg []byte
 	msg, ack := c.spawnReaderCommitter(ctx)
 	logger := logger.GetLogger()
 	logger.Infof("Topic: %s group: %s started kafka consumer: %d", c.topicName, c.group, workerID)
-	processMessage(ctx, fn, msg, ack)
+	c.processMessage(ctx, fn, msg, ack)
 	c.supervisor.Stop()
 }
 
-func processMessage(ctx context.Context, fn func(msg []byte) error, msg <-chan *k.Message, ack chan<- *k.Message) {
+func (c *Consumer) processMessage(ctx context.Context, fn func(msg []byte) error, msg <-chan *k.Message, ack chan<- *k.Message) {
 	tick := time.NewTicker(time.Duration(1000/config.ConsumerMessagesToProcessPSec()) * time.Millisecond)
 	defer tick.Stop()
 	for {
 		select {
 		case m := <-msg:
 			<-tick.C
-			runFuncTillDone(fn, m, ack)
+			c.runFuncTillDone(fn, m, ack)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func runFuncTillDone(fn func(msg []byte) error, msg *k.Message, ack chan<- *k.Message) {
-	backoff := retry.NewExponentialBackoff(initialTimeout, maxTimeout, exponentFactor)
+func (c *Consumer) runFuncTillDone(fn func(msg []byte) error, msg *k.Message, ack chan<- *k.Message) {
+	maxRetries := 5
+	backOff := retry.NewExponentialBackOff(initialTimeout, maxTimeout, exponentFactor)
 	for {
 		err := fn(msg.Value)
+
+		// break on max retries
+		if backOff.GetRetryCounter() > maxRetries {
+			logger.Errorf("Max retries reached for message: %s", string(msg.Value))
+
+			// move to DLQ
+			err = MoveToDLQ(msg.Value, c.topicName, c.group)
+			if err != nil {
+				logger.Errorf("Failed to move message to DLQ, err: %v", err)
+				//TODO: send message to slack channel
+			}
+
+			ack <- msg
+			return
+		}
+
 		if err != nil {
-			time.Sleep(backoff.Next())
+			time.Sleep(backOff.Next())
 		} else {
 			break
 		}
 	}
 	ack <- msg
+}
+
+func MoveToDLQ(msg []byte, topicName, groupName string) error {
+
+	return nil
 }
 
 func (r *kafkaReader) Serve() {
