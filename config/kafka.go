@@ -152,7 +152,6 @@ func consumerASWorkerConfig() KafkaConfig {
 		consumerGroup:             mustGetString("CONS_KAFKA_CONSUMER_GROUP"),
 		workers:                   mustGetInt("CONS_KAFKA_WORKER_COUNT"),
 		lingerMs:                  mustGetInt("CONS_KAFKA_LINGER_MS"),
-		retryBackOffMs:            mustGetInt("CONS_KAFKA_RETRY_BACKOFF_MS"),
 		messageTimeoutMs:          mustGetInt("CONS_KAFKA_MESSAGE_TIMEOUT_MS"),
 		messageBatchSize:          mustGetInt("CONS_KAFKA_PUBLISH_BATCH_SIZE"),
 	}
