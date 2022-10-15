@@ -21,7 +21,6 @@ type KafkaConfig struct {
 	consumerGroup             string
 	internalPublishTopic      string
 	maxConnections            int
-	topics                    []string
 	transactionalPublishTopic string
 	workers                   int
 	lingerMs                  int
@@ -30,6 +29,7 @@ type KafkaConfig struct {
 	messageTimeoutMs          int
 	username                  string // confluent api key
 	password                  string // confluent api secret
+	maxRetries                int
 }
 
 func (kc *KafkaConfig) Username() string {
@@ -38,10 +38,6 @@ func (kc *KafkaConfig) Username() string {
 
 func (kc *KafkaConfig) Password() string {
 	return kc.password
-}
-
-func (kc KafkaConfig) Topics() []string {
-	return kc.topics
 }
 
 func (kc KafkaConfig) BrokerList() string {
@@ -78,6 +74,10 @@ func (kc KafkaConfig) ConsumeOffset() string {
 
 func (kc KafkaConfig) ConsumerGroup() string {
 	return kc.consumerGroup
+}
+
+func (kc KafkaConfig) MaxRetries() int {
+	return kc.maxRetries
 }
 
 func (kc KafkaConfig) Workers() int {
@@ -134,7 +134,6 @@ func newKafkaConfig() KafkaConfig {
 		messageBatchSize:          mustGetInt("KAFKA_PUBLISH_BATCH_SIZE"),
 	}
 
-	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic, "test_topic"}
 	return kc
 }
 
@@ -154,8 +153,8 @@ func consumerASWorkerConfig() KafkaConfig {
 		lingerMs:                  mustGetInt("CONS_KAFKA_LINGER_MS"),
 		messageTimeoutMs:          mustGetInt("CONS_KAFKA_MESSAGE_TIMEOUT_MS"),
 		messageBatchSize:          mustGetInt("CONS_KAFKA_PUBLISH_BATCH_SIZE"),
+		maxRetries:                mustGetInt("CONS_KAFKA_MAX_RETRIES"),
 	}
 
-	kc.topics = []string{kc.bulkPublishTopic, kc.internalPublishTopic, kc.transactionalPublishTopic, "batch_created", "test_topic"}
 	return kc
 }

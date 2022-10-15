@@ -44,5 +44,6 @@ func Test() {
 		return nil
 	}
 
-	server.StartConsumerASWorker(fn)
+	// start consumer worker for test_topic
+	server.StartConsumerASWorker(fn, []string{topic})
 }

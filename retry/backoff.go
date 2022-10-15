@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-// Backoff interface defines contract for backoff strategies
-type Backoff interface {
-	Next() time.Duration
-	GetRetryCounter() int
-}
-
 type exponentialBackoff struct {
 	exponentFactor float64
 	initialTimeout float64
@@ -25,6 +19,12 @@ func NewExponentialBackOff(initialTimeout, maxTimeout time.Duration, exponentFac
 		initialTimeout: float64(initialTimeout / time.Second),
 		maxTimeout:     float64(maxTimeout / time.Second),
 	}
+}
+
+// Backoff interface defines contract for backoff strategies
+type Backoff interface {
+	Next() time.Duration
+	GetRetryCounter() int
 }
 
 func (eb *exponentialBackoff) GetRetryCounter() int {
