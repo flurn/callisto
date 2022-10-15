@@ -14,7 +14,7 @@ func GetNextRetryTopicName(topic string, retryCounter int) string {
 	if len(baseTopicName) > 1 {
 		topic = baseTopicName[0]
 	}
-	return topic + types.Retry_Postfix + strconv.Itoa(retryCounter+1)
+	return topic + types.Retry_Postfix + strconv.Itoa(retryCounter)
 }
 
 // retry time in milliseconds
@@ -50,11 +50,12 @@ func GetBackOffTimeInMilliSeconds(retryCount int, retryType types.RetryType) int
 		backOffTime = baseTime
 	}
 
-	return int(math.Max(float64(backOffTime), float64(maxRetryTime)))
+	return int(math.Min(float64(backOffTime), float64(maxRetryTime)))
 }
 
 func GetDLQTopicName(topic string) string {
-	if split := strings.Split(topic, types.DLQ_Postfix); len(split) > 1 {
+	split := strings.Split(topic, types.Retry_Postfix)
+	if len(split) > 1 {
 		return split[0] + types.DLQ_Postfix
 	}
 	return topic + types.DLQ_Postfix

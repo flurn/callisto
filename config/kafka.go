@@ -15,21 +15,29 @@ const (
 type KafkaConfig struct {
 	brokerList                string
 	keepAliveEnabled          bool
-	backOff                   int
-	bulkPublishTopic          string
 	consumeOffset             string
 	consumerGroup             string
-	internalPublishTopic      string
 	maxConnections            int
 	transactionalPublishTopic string
 	workers                   int
 	lingerMs                  int
-	retryBackOffMs            int
 	messageBatchSize          int
 	messageTimeoutMs          int
 	username                  string // confluent api key
 	password                  string // confluent api secret
-	maxRetries                int
+}
+
+type RetryConfig struct {
+	Type                types.RetryType
+	MaxRetries          int
+	RetryFailedCallback func(msg []byte, err error)
+	RetryTopics         []string
+}
+
+type KafkaTopicConfig struct {
+	TopicName           string
+	Retry               *RetryConfig
+	ConsumerMessagePSec int
 }
 
 func (kc *KafkaConfig) Username() string {
@@ -52,20 +60,8 @@ func (kc KafkaConfig) MaxConnections() int {
 	return kc.maxConnections
 }
 
-func (kc KafkaConfig) BulkPublishTopic() string {
-	return kc.bulkPublishTopic
-}
-
-func (kc KafkaConfig) InternalPublishTopic() string {
-	return kc.internalPublishTopic
-}
-
 func (kc KafkaConfig) TransactionalPublishTopic() string {
 	return kc.transactionalPublishTopic
-}
-
-func (kc KafkaConfig) BackOff() int {
-	return kc.backOff
 }
 
 func (kc KafkaConfig) ConsumeOffset() string {
@@ -76,20 +72,12 @@ func (kc KafkaConfig) ConsumerGroup() string {
 	return kc.consumerGroup
 }
 
-func (kc KafkaConfig) MaxRetries() int {
-	return kc.maxRetries
-}
-
 func (kc KafkaConfig) Workers() int {
 	return kc.workers
 }
 
 func (kc KafkaConfig) LingerMs() int {
 	return kc.lingerMs
-}
-
-func (kc KafkaConfig) RetryBackoffMs() int {
-	return kc.retryBackOffMs
 }
 
 func (kc KafkaConfig) MessageBatchSize() int {
@@ -106,10 +94,6 @@ func (kc KafkaConfig) KafkaPublishTopic(ctx context.Context) string {
 	switch publishScope {
 	case transactionalScope:
 		return kc.TransactionalPublishTopic()
-	case bulkScope:
-		return kc.BulkPublishTopic()
-	case internalScope:
-		return kc.InternalPublishTopic()
 	default:
 		return kc.TransactionalPublishTopic()
 	}
@@ -120,16 +104,12 @@ func newKafkaConfig() KafkaConfig {
 		username:                  mustGetString("KAFKA_CLUSTER_USERNAME"),
 		password:                  mustGetString("KAFKA_CLUSTER_PASSWORD"),
 		brokerList:                mustGetString("KAFKA_BROKER_LIST"),
-		bulkPublishTopic:          mustGetString("KAFKA_BULK_PUBLISH_TOPIC"),
-		internalPublishTopic:      mustGetString("KAFKA_INTERNAL_PUBLISH_TOPIC"),
 		maxConnections:            mustGetInt("KAFKA_MAX_CONNECTIONS"),
 		transactionalPublishTopic: mustGetString("KAFKA_TRANSACTIONAL_PUBLISH_TOPIC"),
-		backOff:                   mustGetInt("KAFKA_RETRY_IN_MILLISECONDS"),
 		consumeOffset:             mustGetString("KAFKA_CONSUME_OFFSET"),
 		consumerGroup:             mustGetString("KAFKA_CONSUMER_GROUP"),
 		workers:                   mustGetInt("KAFKA_WORKER_COUNT"),
 		lingerMs:                  mustGetInt("KAFKA_LINGER_MS"),
-		retryBackOffMs:            mustGetInt("KAFKA_RETRY_BACKOFF_MS"),
 		messageTimeoutMs:          mustGetInt("KAFKA_MESSAGE_TIMEOUT_MS"),
 		messageBatchSize:          mustGetInt("KAFKA_PUBLISH_BATCH_SIZE"),
 	}
@@ -139,21 +119,16 @@ func newKafkaConfig() KafkaConfig {
 
 func consumerASWorkerConfig() KafkaConfig {
 	kc := KafkaConfig{
-		username:                  mustGetString("KAFKA_CLUSTER_USERNAME"),
-		password:                  mustGetString("KAFKA_CLUSTER_PASSWORD"),
-		brokerList:                mustGetString("CONS_KAFKA_BROKER_LIST"),
-		bulkPublishTopic:          mustGetString("CONS_KAFKA_BULK_PUBLISH_TOPIC"),
-		internalPublishTopic:      mustGetString("CONS_KAFKA_INTERNAL_PUBLISH_TOPIC"),
-		maxConnections:            mustGetInt("CONS_KAFKA_MAX_CONNECTIONS"),
-		transactionalPublishTopic: mustGetString("CONS_KAFKA_TRANSACTIONAL_PUBLISH_TOPIC"),
-		backOff:                   mustGetInt("CONS_KAFKA_RETRY_IN_MILLISECONDS"),
-		consumeOffset:             mustGetString("CONS_KAFKA_CONSUME_OFFSET"),
-		consumerGroup:             mustGetString("CONS_KAFKA_CONSUMER_GROUP"),
-		workers:                   mustGetInt("CONS_KAFKA_WORKER_COUNT"),
-		lingerMs:                  mustGetInt("CONS_KAFKA_LINGER_MS"),
-		messageTimeoutMs:          mustGetInt("CONS_KAFKA_MESSAGE_TIMEOUT_MS"),
-		messageBatchSize:          mustGetInt("CONS_KAFKA_PUBLISH_BATCH_SIZE"),
-		maxRetries:                mustGetInt("CONS_KAFKA_MAX_RETRIES"),
+		username:         mustGetString("KAFKA_CLUSTER_USERNAME"),
+		password:         mustGetString("KAFKA_CLUSTER_PASSWORD"),
+		brokerList:       mustGetString("CONS_KAFKA_BROKER_LIST"),
+		maxConnections:   mustGetInt("CONS_KAFKA_MAX_CONNECTIONS"),
+		consumeOffset:    mustGetString("CONS_KAFKA_CONSUME_OFFSET"),
+		consumerGroup:    mustGetString("CONS_KAFKA_CONSUMER_GROUP"),
+		workers:          mustGetInt("CONS_KAFKA_WORKER_COUNT"),
+		lingerMs:         mustGetInt("CONS_KAFKA_LINGER_MS"),
+		messageTimeoutMs: mustGetInt("CONS_KAFKA_MESSAGE_TIMEOUT_MS"),
+		messageBatchSize: mustGetInt("CONS_KAFKA_PUBLISH_BATCH_SIZE"),
 	}
 
 	return kc

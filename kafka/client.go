@@ -14,8 +14,8 @@ func GetClient() Client {
 	return NewKafkaClient(config.Kafka())
 }
 
-func CreateTopics(topicNames []string, kafkaConfig config.KafkaConfig, createDLQ bool) {
-	for _, topicName := range topicNames {
-		CreateTopic(topicName, kafkaConfig, createDLQ)
+func CreateTopics(topicConfigs []*config.KafkaTopicConfig, kafkaConfig config.KafkaConfig) {
+	for _, topicConfig := range topicConfigs {
+		CreateTopic(topicConfig, kafkaConfig)
 	}
 }

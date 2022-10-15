@@ -15,14 +15,8 @@ const (
 	RetryTypeCustom      RetryType = "custom"
 )
 
-type RetryConfig struct {
-	Type                RetryType
-	MaxRetries          int
-	RetryFailedCallback func(msg []byte, err error)
-}
-
 type RetryMessage struct {
-	MessageCounter        int
-	ExpectedExecutionTime time.Time
+	RetryCounter          int       `json:"retry_counter"`
+	ExpectedExecutionTime time.Time `json:"expected_execution_time"`
 	*k.Message
 }

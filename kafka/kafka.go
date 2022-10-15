@@ -9,8 +9,8 @@ import (
 
 	k "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/flurn/callisto/config"
+	"github.com/flurn/callisto/helper"
 	"github.com/flurn/callisto/logger"
-	"github.com/flurn/callisto/types"
 	"github.com/getsentry/raven-go"
 )
 
@@ -76,23 +76,32 @@ func confluentKafkaConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
 		"default.topic.config": k.ConfigMap{
 			"partitioner": "consistent_random",
 		},
-		"sasl.username":      kafkaConfig.Username(),
-		"sasl.password":      kafkaConfig.Password(),
-		"linger.ms":          kafkaConfig.LingerMs(),
-		"retry.backoff.ms":   kafkaConfig.RetryBackoffMs(),
-		"batch.num.messages": kafkaConfig.MessageBatchSize(),
-		"message.timeout.ms": kafkaConfig.MessageTimeoutMs(),
+		"sasl.username":        kafkaConfig.Username(),
+		"sasl.password":        kafkaConfig.Password(),
+		"linger.ms":            kafkaConfig.LingerMs(),
+		"batch.num.messages":   kafkaConfig.MessageBatchSize(),
+		"message.timeout.ms":   kafkaConfig.MessageTimeoutMs(),
+		"max.poll.interval.ms": int((7 * time.Minute).Milliseconds()), // max poll for kafka retry consumer
 	}
 }
 
-func CreateTopic(topicName string, kafkaConfig config.KafkaConfig, createDLQ bool) {
-	adminClient, err := k.NewAdminClient(confluentKafkaConfig(kafkaConfig))
-	defer adminClient.Close()
+func checkKafkaTopicCreateError(results []k.TopicResult) {
+	for _, result := range results {
+		if result.Error.Code() != k.ErrNoError &&
+			result.Error.Code() != k.ErrTopicAlreadyExists {
+			logger.Errorf("Kafka topic creation failed for %s: %v", result.Topic, result.Error)
+			os.Exit(1)
+		}
+	}
+}
 
+func CreateTopic(topicConfig *config.KafkaTopicConfig, kafkaConfig config.KafkaConfig) {
+	adminClient, err := k.NewAdminClient(confluentKafkaConfig(kafkaConfig))
 	if err != nil {
-		fmt.Printf("Failed to create Admin client: %s\n", err)
+		logger.Errorf("Failed to create Admin client: %s\n", err)
 		os.Exit(1)
 	}
+	defer adminClient.Close()
 
 	// the Admin call blocks waiting for a result.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -105,28 +114,53 @@ func CreateTopic(topicName string, kafkaConfig config.KafkaConfig, createDLQ boo
 		panic("Panic: time.ParseDuration(60s)")
 	}
 
+	// create main and dead letter topic
 	results, err := adminClient.CreateTopics(ctx,
-		[]k.TopicSpecification{{
-			Topic:             topicName,
-			NumPartitions:     1,
-			ReplicationFactor: 3}},
+		[]k.TopicSpecification{
+			{
+				Topic:             topicConfig.TopicName,
+				NumPartitions:     1,
+				ReplicationFactor: 3,
+			},
+			{
+				Topic:             helper.GetDLQTopicName(topicConfig.TopicName),
+				NumPartitions:     1,
+				ReplicationFactor: 3,
+			},
+		},
 		k.SetAdminOperationTimeout(maxDuration))
 
 	if err != nil {
-		fmt.Printf("Problem during the topic creation: %v\n", err)
+		logger.Errorf("Failed to create topic: %v\n", err)
 		os.Exit(1)
 	}
 
-	for _, result := range results {
-		if result.Error.Code() != k.ErrNoError &&
-			result.Error.Code() != k.ErrTopicAlreadyExists {
-			fmt.Printf("Topic creation failed for %s: %v",
-				result.Topic, result.Error.String())
+	checkKafkaTopicCreateError(results)
+
+	// create retry topic
+	if topicConfig.Retry != nil && topicConfig.Retry.MaxRetries > 0 {
+		topicSpecification := []k.TopicSpecification{}
+		for i := 1; i <= topicConfig.Retry.MaxRetries; i++ {
+			retryTopicName := ""
+			if len(topicConfig.Retry.RetryTopics) < i+1 {
+				retryTopicName = helper.GetNextRetryTopicName(topicConfig.TopicName, i)
+			} else {
+				retryTopicName = topicConfig.Retry.RetryTopics[i]
+			}
+
+			// create all retry topics with 1 partition
+			topicSpecification = append(topicSpecification, k.TopicSpecification{
+				Topic:             retryTopicName,
+				NumPartitions:     1,
+				ReplicationFactor: 3,
+			})
+		}
+		maxDuration := 5*time.Minute + 30*time.Second
+		results, err = adminClient.CreateTopics(ctx, topicSpecification, k.SetAdminOperationTimeout(maxDuration))
+		if err != nil {
+			logger.Errorf("Problem during the topic creation: %v\n", err)
 			os.Exit(1)
 		}
-	}
-
-	if createDLQ {
-		CreateTopic(topicName+types.DLQ_Postfix, kafkaConfig, false)
+		checkKafkaTopicCreateError(results)
 	}
 }

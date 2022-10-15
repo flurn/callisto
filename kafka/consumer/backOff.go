@@ -7,18 +7,19 @@ import (
 
 	k "github.com/confluentinc/confluent-kafka-go/kafka"
 
+	"github.com/flurn/callisto/config"
 	"github.com/flurn/callisto/helper"
 	"github.com/flurn/callisto/logger"
 	"github.com/flurn/callisto/retry"
 	"github.com/flurn/callisto/types"
 )
 
-func (c *Consumer) Retry(fn func(msg []byte) error, msg *k.Message, rc *types.RetryConfig) error {
+func (c *Consumer) Retry(fn func(msg []byte) error, msg *k.Message, rc *config.RetryConfig) error {
 	switch rc.Type {
 	case types.RetryTypeExponential:
 		return c.ExponentialBackOff(fn, msg, rc)
-	// case types.RetryTypeFixed:
-	// 	return c.retryFixed(fn, msg)
+	case types.RetryTypeCustom:
+		return c.ExponentialBackOff(fn, msg, rc)
 	case types.RetryTypeFifo:
 		return c.fifoBackOff(fn, msg, rc)
 	default:
@@ -27,7 +28,7 @@ func (c *Consumer) Retry(fn func(msg []byte) error, msg *k.Message, rc *types.Re
 	}
 }
 
-func (c *Consumer) fifoBackOff(fn func(msg []byte) error, msg *k.Message, rc *types.RetryConfig) error {
+func (c *Consumer) fifoBackOff(fn func(msg []byte) error, msg *k.Message, rc *config.RetryConfig) error {
 	backOff := retry.NewExponentialBackOff(initialTimeout, maxTimeout, exponentFactor)
 	for {
 		err := fn(msg.Value)
@@ -52,7 +53,7 @@ func (c *Consumer) fifoBackOff(fn func(msg []byte) error, msg *k.Message, rc *ty
 	}
 }
 
-func (c *Consumer) ExponentialBackOff(fn func(msg []byte) error, msg *k.Message, rc *types.RetryConfig) error {
+func (c *Consumer) ExponentialBackOff(fn func(msg []byte) error, msg *k.Message, rc *config.RetryConfig) error {
 	if rc.MaxRetries == 0 {
 		// move to DLQ
 		rc.RetryFailedCallback(msg.Value, fmt.Errorf("max retries reached"))
@@ -60,13 +61,13 @@ func (c *Consumer) ExponentialBackOff(fn func(msg []byte) error, msg *k.Message,
 		return err
 	}
 
-	retryTopicName := helper.GetNextRetryTopicName(c.topicName, 0)
+	retryTopicName := helper.GetNextRetryTopicName(c.topicName, 1)
 	// get backOff time
 	backOffTime := helper.GetBackOffTimeInMilliSeconds(0, rc.Type)
 
 	// create retry message wrapper
 	retryMessage := &types.RetryMessage{
-		MessageCounter:        0,
+		RetryCounter:          1,
 		Message:               msg,
 		ExpectedExecutionTime: time.Now().Add(time.Duration(backOffTime * int(time.Microsecond))),
 	}
@@ -80,6 +81,7 @@ func (c *Consumer) ExponentialBackOff(fn func(msg []byte) error, msg *k.Message,
 	err = c.producer(retryTopicName, retryMessageBytes)
 	if err != nil {
 		logger.Errorf("Failed to move message to retry topic %s, err: %v", retryTopicName, err)
+		rc.RetryFailedCallback(msg.Value, err)
 		return err
 	}
 

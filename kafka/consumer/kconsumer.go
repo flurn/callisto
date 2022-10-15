@@ -74,7 +74,6 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 		"enable.auto.commit":      false,
 		"auto.offset.reset":       offset,
 		"socket.keepalive.enable": true,
-		"retry.backoff.ms":        time.Duration(kafkaConfigProperty.BackOff()),
 	}
 
 	consumer, err := k.NewConsumer(configMap)
@@ -109,7 +108,23 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 	}
 }
 
-func (c *Consumer) Consume(ctx context.Context, workerID int, fn func(msg []byte) error, wg *sync.WaitGroup, retry *types.RetryConfig) {
+func StartMainAndRetryConsumers(topicName string, kafkaConfigProperty config.KafkaConfig, fn func(msg []byte) error, retry *config.RetryConfig, wg *sync.WaitGroup) {
+	ctx := context.Background()
+	consumer := NewKafkaConsumer(topicName, kafkaConfigProperty)
+	wg.Add(1)
+	go consumer.consume(ctx, 0, fn, wg, retry)
+
+	if retry != nil && retry.MaxRetries > 0 {
+		for i := 1; i <= retry.MaxRetries; i++ {
+			retryTopicName := helper.GetNextRetryTopicName(topicName, i)
+			retryConsumer := NewKafkaConsumer(retryTopicName, kafkaConfigProperty)
+			wg.Add(1)
+			go retryConsumer.consume(ctx, i+1, fn, wg, retry)
+		}
+	}
+}
+
+func (c *Consumer) consume(ctx context.Context, workerID int, fn func(msg []byte) error, wg *sync.WaitGroup, retry *config.RetryConfig) {
 	defer wg.Done()
 	msg, ack := c.spawnReaderCommitter(ctx)
 	logger := logger.GetLogger()
@@ -125,7 +140,7 @@ func (c *Consumer) Consume(ctx context.Context, workerID int, fn func(msg []byte
 	c.supervisor.Stop()
 }
 
-func (c *Consumer) processMessage(ctx context.Context, fn func(msg []byte) error, retry *types.RetryConfig, msg <-chan *k.Message, ack chan<- *k.Message) {
+func (c *Consumer) processMessage(ctx context.Context, fn func(msg []byte) error, retry *config.RetryConfig, msg <-chan *k.Message, ack chan<- *k.Message) {
 	tick := time.NewTicker(time.Duration(1000/config.ConsumerMessagesToProcessPSec()) * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -139,7 +154,7 @@ func (c *Consumer) processMessage(ctx context.Context, fn func(msg []byte) error
 	}
 }
 
-func (c *Consumer) processRetryMessage(ctx context.Context, fn func(msg []byte) error, retry *types.RetryConfig, msg <-chan *k.Message, ack chan<- *k.Message) {
+func (c *Consumer) processRetryMessage(ctx context.Context, fn func(msg []byte) error, retry *config.RetryConfig, msg <-chan *k.Message, ack chan<- *k.Message) {
 	for {
 		select {
 		case m := <-msg:
@@ -150,7 +165,7 @@ func (c *Consumer) processRetryMessage(ctx context.Context, fn func(msg []byte) 
 	}
 }
 
-func (c *Consumer) runRetry(fn func(msg []byte) error, m *k.Message, retry *types.RetryConfig, ack chan<- *k.Message) {
+func (c *Consumer) runRetry(fn func(msg []byte) error, m *k.Message, retry *config.RetryConfig, ack chan<- *k.Message) {
 	// get retry message from kafka message
 	retryMessageData := &types.RetryMessage{}
 	err := json.Unmarshal(m.Value, retryMessageData)
@@ -167,8 +182,8 @@ func (c *Consumer) runRetry(fn func(msg []byte) error, m *k.Message, retry *type
 	err = fn(retryMessageData.Message.Value)
 	if err != nil {
 		// retry
-		retryMessageData.MessageCounter++
-		if retryMessageData.MessageCounter > retry.MaxRetries {
+		retryMessageData.RetryCounter++
+		if retryMessageData.RetryCounter > retry.MaxRetries {
 			// max retry reached
 			retry.RetryFailedCallback(m.Value, err)
 
@@ -180,12 +195,19 @@ func (c *Consumer) runRetry(fn func(msg []byte) error, m *k.Message, retry *type
 				retry.RetryFailedCallback(m.Value, err)
 			}
 		} else {
-			nextRetryTopic := helper.GetNextRetryTopicName(c.topicName, retryMessageData.MessageCounter)
+			nextRetryTopic := helper.GetNextRetryTopicName(c.topicName, retryMessageData.RetryCounter)
 
-			backOffTime := helper.GetBackOffTimeInMilliSeconds(retryMessageData.MessageCounter, retry.Type)
+			backOffTime := helper.GetBackOffTimeInMilliSeconds(retryMessageData.RetryCounter, retry.Type)
 			retryMessageData.ExpectedExecutionTime = time.Now().Add(time.Duration(backOffTime * int(time.Millisecond)))
+
+			nextRetryData, err := json.Marshal(retryMessageData)
+			if err != nil {
+				logger.Errorf("Failed to marshal retry message, err: %v", err)
+				retry.RetryFailedCallback(m.Value, err)
+				return
+			}
 			// push to next retry topic
-			err = c.producer(nextRetryTopic, m.Value)
+			err = c.producer(nextRetryTopic, nextRetryData)
 			if err != nil {
 				logger.Errorf("Failed to push to retry topic, err: %v", err)
 				retry.RetryFailedCallback(m.Value, err)
@@ -196,7 +218,7 @@ func (c *Consumer) runRetry(fn func(msg []byte) error, m *k.Message, retry *type
 	ack <- m
 }
 
-func (c *Consumer) runFunc(fn func(msg []byte) error, msg *k.Message, rc *types.RetryConfig, ack chan<- *k.Message) {
+func (c *Consumer) runFunc(fn func(msg []byte) error, msg *k.Message, rc *config.RetryConfig, ack chan<- *k.Message) {
 	// process message
 	err := fn(msg.Value)
 
