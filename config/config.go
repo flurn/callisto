@@ -18,7 +18,7 @@ type Config struct {
 	consumerMessagesProcessedPerSec int
 	consumerASWorkerPort            int
 	consumerASWorkerConfig          KafkaConfig
-	retryBackoffMs                  int
+	retryBackOffMs                  int
 }
 
 func Port() int {
@@ -67,7 +67,7 @@ func ConsumerMessagesToProcessPSec() int {
 func RetryBackoffMs() int {
 	appConfigMutex.RLock()
 	defer appConfigMutex.RUnlock()
-	return appConfig.retryBackoffMs
+	return appConfig.retryBackOffMs
 }
 
 type ApplicationType string
@@ -103,7 +103,7 @@ func Load(appType ApplicationType, configFile string) {
 		consumerMessagesProcessedPerSec: mustGetInt("CONSUMER_NUM_MESSAGES_PROCESSED_PER_SECOND"),
 		kafkaConfig:                     newKafkaConfig(),
 		consumerASWorkerConfig:          consumerASWorkerConfig(),
-		retryBackoffMs:                  mustGetInt("CONS_KAFKA_RETRY_BACKOFF_MS"),
+		retryBackOffMs:                  mustGetInt("CONS_KAFKA_RETRY_BACKOFF_MS"),
 	}
 	appConfigMutex.Lock()
 	defer appConfigMutex.Unlock()

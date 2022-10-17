@@ -114,7 +114,7 @@ func StartMainAndRetryConsumers(topicName string, kafkaConfigProperty config.Kaf
 	wg.Add(1)
 	go consumer.consume(ctx, 0, fn, wg, retry)
 
-	if retry != nil && retry.MaxRetries > 0 {
+	if retry != nil && retry.MaxRetries > 0 && retry.Type != types.RetryTypeFifo {
 		for i := 1; i <= retry.MaxRetries; i++ {
 			retryTopicName := helper.GetNextRetryTopicName(topicName, i)
 			retryConsumer := NewKafkaConsumer(retryTopicName, kafkaConfigProperty)
