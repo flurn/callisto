@@ -25,6 +25,7 @@ type KafkaConfig struct {
 	messageTimeoutMs          int
 	username                  string // confluent api key
 	password                  string // confluent api secret
+	retryBackoffMs            int
 }
 
 type RetryConfig struct {
@@ -36,7 +37,9 @@ type RetryConfig struct {
 type KafkaTopicConfig struct {
 	TopicName           string
 	Retry               *RetryConfig
+	NumPartitions       int
 	ConsumerMessagePSec int
+	ReplicationFactor   int
 }
 
 func (kc *KafkaConfig) Username() string {
@@ -96,6 +99,10 @@ func (kc KafkaConfig) KafkaPublishTopic(ctx context.Context) string {
 	default:
 		return kc.TransactionalPublishTopic()
 	}
+}
+
+func (kc KafkaConfig) RetryBackoffMs() int {
+	return kc.retryBackoffMs
 }
 
 func newKafkaConfig() KafkaConfig {

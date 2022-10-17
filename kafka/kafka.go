@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	k "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/flurn/callisto/config"
 	"github.com/flurn/callisto/helper"
 	"github.com/flurn/callisto/logger"
+	"github.com/flurn/callisto/types"
 	"github.com/getsentry/raven-go"
 )
 
@@ -78,6 +80,7 @@ func confluentKafkaConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
 		"sasl.username":        kafkaConfig.Username(),
 		"sasl.password":        kafkaConfig.Password(),
 		"linger.ms":            kafkaConfig.LingerMs(),
+		"retry.backoff.ms":     kafkaConfig.RetryBackoffMs(),
 		"batch.num.messages":   kafkaConfig.MessageBatchSize(),
 		"message.timeout.ms":   kafkaConfig.MessageTimeoutMs(),
 		"max.poll.interval.ms": int((7 * time.Minute).Milliseconds()), // max poll for kafka retry consumer
@@ -95,6 +98,14 @@ func checkKafkaTopicCreateError(results []k.TopicResult) {
 }
 
 func CreateTopic(topicConfig *config.KafkaTopicConfig, kafkaConfig config.KafkaConfig) {
+	if topicConfig == nil {
+		panic("topicConfig is nil")
+	} else if topicConfig.TopicName == "" {
+		panic("TopicNameName is empty")
+	} else if len(strings.Split(topicConfig.TopicName, types.Retry_Postfix)) > 1 {
+		panic("main TopicName should not contain '_retry_'")
+	}
+
 	adminClient, err := k.NewAdminClient(confluentKafkaConfig(kafkaConfig))
 	if err != nil {
 		logger.Errorf("Failed to create Admin client: %s\n", err)
@@ -113,18 +124,26 @@ func CreateTopic(topicConfig *config.KafkaTopicConfig, kafkaConfig config.KafkaC
 		panic("Panic: time.ParseDuration(60s)")
 	}
 
+	if topicConfig.ReplicationFactor == 0 {
+		topicConfig.ReplicationFactor = 2
+	}
+
+	if topicConfig.NumPartitions == 0 {
+		topicConfig.NumPartitions = 1
+	}
+
 	// create main and dead letter topic
 	results, err := adminClient.CreateTopics(ctx,
 		[]k.TopicSpecification{
 			{
 				Topic:             topicConfig.TopicName,
-				NumPartitions:     1,
-				ReplicationFactor: 3,
+				NumPartitions:     topicConfig.NumPartitions,
+				ReplicationFactor: topicConfig.ReplicationFactor,
 			},
 			{
 				Topic:             helper.GetDLQTopicName(topicConfig.TopicName),
-				NumPartitions:     1,
-				ReplicationFactor: 3,
+				NumPartitions:     topicConfig.NumPartitions,
+				ReplicationFactor: topicConfig.ReplicationFactor,
 			},
 		},
 		k.SetAdminOperationTimeout(maxDuration))
@@ -144,11 +163,10 @@ func CreateTopic(topicConfig *config.KafkaTopicConfig, kafkaConfig config.KafkaC
 			// create all retry topics with 1 partition
 			topicSpecification = append(topicSpecification, k.TopicSpecification{
 				Topic:             retryTopicName,
-				NumPartitions:     1,
-				ReplicationFactor: 3,
+				NumPartitions:     1, // retry topic should have only 1 partition
+				ReplicationFactor: topicConfig.ReplicationFactor,
 			})
 		}
-		maxDuration := 5*time.Minute + 30*time.Second
 		results, err = adminClient.CreateTopics(ctx, topicSpecification, k.SetAdminOperationTimeout(maxDuration))
 		if err != nil {
 			logger.Errorf("Problem during the topic creation: %v\n", err)
