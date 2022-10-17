@@ -59,14 +59,14 @@ func logKafkaError(err string) {
 }
 
 func NewKafkaClient(kafkaConfig config.KafkaConfig) *kafka {
-	producer, err := k.NewProducer(confluentKafkaConfig(kafkaConfig))
+	producer, err := k.NewProducer(confluentKafkaWorkerConfig(kafkaConfig))
 	if err != nil {
 		panic(err)
 	}
 	return &kafka{producer: producer}
 }
 
-func confluentKafkaConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
+func confluentKafkaCommonConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
 	return &k.ConfigMap{
 		"bootstrap.servers":       kafkaConfig.BrokerList(),
 		"socket.keepalive.enable": kafkaConfig.KeepAlive(),
@@ -74,17 +74,23 @@ func confluentKafkaConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
 		"security.protocol":       "SASL_SSL",
 		"sasl.mechanisms":         "PLAIN",
 		"api.version.request":     "true",
-		"default.topic.config": k.ConfigMap{
-			"partitioner": "consistent_random",
-		},
-		"sasl.username":        kafkaConfig.Username(),
-		"sasl.password":        kafkaConfig.Password(),
-		"linger.ms":            kafkaConfig.LingerMs(),
-		"retry.backoff.ms":     kafkaConfig.RetryBackoffMs(),
-		"batch.num.messages":   kafkaConfig.MessageBatchSize(),
-		"message.timeout.ms":   kafkaConfig.MessageTimeoutMs(),
-		"max.poll.interval.ms": int((7 * time.Minute).Milliseconds()), // max poll for kafka retry consumer
+		"sasl.username":           kafkaConfig.Username(),
+		"sasl.password":           kafkaConfig.Password(),
+		"linger.ms":               kafkaConfig.LingerMs(),
+		"retry.backoff.ms":        kafkaConfig.RetryBackoffMs(),
+		"batch.num.messages":      kafkaConfig.MessageBatchSize(),
+		"message.timeout.ms":      kafkaConfig.MessageTimeoutMs(),
 	}
+}
+
+func confluentKafkaWorkerConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
+	return confluentKafkaCommonConfig(kafkaConfig)
+}
+
+func confluentKafkaConsumerConfig(kafkaConfig config.KafkaConfig) *k.ConfigMap {
+	kCfgMap := confluentKafkaCommonConfig(kafkaConfig)
+	kCfgMap.SetKey("max.poll.interval.ms", int((7 * time.Minute).Milliseconds())) // max poll for kafka retry consumer
+	return kCfgMap
 }
 
 func checkKafkaTopicCreateError(results []k.TopicResult) {
@@ -106,7 +112,7 @@ func CreateTopic(topicConfig *config.KafkaTopicConfig, kafkaConfig config.KafkaC
 		panic("main TopicName should not contain '_retry_'")
 	}
 
-	adminClient, err := k.NewAdminClient(confluentKafkaConfig(kafkaConfig))
+	adminClient, err := k.NewAdminClient(confluentKafkaCommonConfig(kafkaConfig))
 	if err != nil {
 		logger.Errorf("Failed to create Admin client: %s\n", err)
 		os.Exit(1)

@@ -119,7 +119,7 @@ func StartMainAndRetryConsumers(topicName string, kafkaConfigProperty config.Kaf
 			retryTopicName := helper.GetNextRetryTopicName(topicName, i)
 			retryConsumer := NewKafkaConsumer(retryTopicName, kafkaConfigProperty)
 			wg.Add(1)
-			go retryConsumer.consume(ctx, i+1, fn, wg, retry)
+			go retryConsumer.consume(ctx, i, fn, wg, retry)
 		}
 	}
 }

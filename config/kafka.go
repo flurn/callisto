@@ -118,6 +118,7 @@ func newKafkaConfig() KafkaConfig {
 		lingerMs:                  mustGetInt("KAFKA_LINGER_MS"),
 		messageTimeoutMs:          mustGetInt("KAFKA_MESSAGE_TIMEOUT_MS"),
 		messageBatchSize:          mustGetInt("KAFKA_PUBLISH_BATCH_SIZE"),
+		retryBackoffMs:            mustGetInt("CONS_KAFKA_RETRY_BACKOFF_MS"),
 	}
 
 	return kc
@@ -135,6 +136,7 @@ func consumerASWorkerConfig() KafkaConfig {
 		lingerMs:         mustGetInt("CONS_KAFKA_LINGER_MS"),
 		messageTimeoutMs: mustGetInt("CONS_KAFKA_MESSAGE_TIMEOUT_MS"),
 		messageBatchSize: mustGetInt("CONS_KAFKA_PUBLISH_BATCH_SIZE"),
+		retryBackoffMs:            mustGetInt("CONS_KAFKA_RETRY_BACKOFF_MS"),
 	}
 
 	return kc
