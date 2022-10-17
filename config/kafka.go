@@ -31,7 +31,6 @@ type RetryConfig struct {
 	Type          types.RetryType
 	MaxRetries    int
 	ErrorCallback func(msg []byte, err error)
-	RetryTopics   []string
 }
 
 type KafkaTopicConfig struct {

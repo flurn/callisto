@@ -141,13 +141,7 @@ func CreateTopic(topicConfig *config.KafkaTopicConfig, kafkaConfig config.KafkaC
 	if topicConfig.Retry != nil && topicConfig.Retry.MaxRetries > 0 {
 		topicSpecification := []k.TopicSpecification{}
 		for i := 1; i <= topicConfig.Retry.MaxRetries; i++ {
-			retryTopicName := ""
-			if len(topicConfig.Retry.RetryTopics) < i+1 {
-				retryTopicName = helper.GetNextRetryTopicName(topicConfig.TopicName, i)
-			} else {
-				retryTopicName = topicConfig.Retry.RetryTopics[i]
-			}
-
+			retryTopicName := helper.GetNextRetryTopicName(topicConfig.TopicName, i)
 			// create all retry topics with 1 partition
 			topicSpecification = append(topicSpecification, k.TopicSpecification{
 				Topic:             retryTopicName,
