@@ -162,7 +162,7 @@ func CreateTopic(topicConfig *config.KafkaTopicConfig, kafkaConfig config.KafkaC
 	checkKafkaTopicCreateError(results)
 
 	// create retry topic
-	if topicConfig.Retry != nil && topicConfig.Retry.MaxRetries > 0 {
+	if topicConfig.Retry != nil && topicConfig.Retry.MaxRetries > 0 && topicConfig.Retry.Type != types.RetryTypeFifo {
 		topicSpecification := []k.TopicSpecification{}
 		for i := 1; i <= topicConfig.Retry.MaxRetries; i++ {
 			retryTopicName := helper.GetNextRetryTopicName(topicConfig.TopicName, i)
