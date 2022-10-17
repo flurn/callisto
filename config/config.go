@@ -18,6 +18,7 @@ type Config struct {
 	consumerMessagesProcessedPerSec int
 	consumerASWorkerPort            int
 	consumerASWorkerConfig          KafkaConfig
+	retryBackoffMs                  int
 }
 
 func Port() int {
@@ -63,6 +64,11 @@ func ConsumerMessagesToProcessPSec() int {
 	defer appConfigMutex.RUnlock()
 	return appConfig.consumerMessagesProcessedPerSec
 }
+func RetryBackoffMs() int {
+	appConfigMutex.RLock()
+	defer appConfigMutex.RUnlock()
+	return appConfig.retryBackoffMs
+}
 
 type ApplicationType string
 
@@ -71,15 +77,18 @@ const (
 	ConsumerAsWorker ApplicationType = "CONSUMER_WORKER"
 )
 
-func Load(appType ApplicationType) {
+func Load(appType ApplicationType, configFile string) {
 	viper.SetDefault("APP_PORT", "8080")
 	viper.SetDefault("LOG_LEVEL", "error")
-	viper.SetConfigName("application")
-	viper.AddConfigPath("./")
-	viper.AddConfigPath("../")
-	viper.AddConfigPath("../../")
-	viper.SetConfigType("yaml")
-
+	if configFile != "" {
+		viper.SetConfigFile(configFile)
+	} else {
+		viper.SetConfigName("application")
+		viper.AddConfigPath("./")
+		viper.AddConfigPath("../")
+		viper.AddConfigPath("../../")
+		viper.SetConfigType("yaml")
+	}
 	viper.ReadInConfig()
 	viper.AutomaticEnv()
 	cfg := Config{
@@ -94,6 +103,7 @@ func Load(appType ApplicationType) {
 		consumerMessagesProcessedPerSec: mustGetInt("CONSUMER_NUM_MESSAGES_PROCESSED_PER_SECOND"),
 		kafkaConfig:                     newKafkaConfig(),
 		consumerASWorkerConfig:          consumerASWorkerConfig(),
+		retryBackoffMs:                  mustGetInt("CONS_KAFKA_RETRY_BACKOFF_MS"),
 	}
 	appConfigMutex.Lock()
 	defer appConfigMutex.Unlock()
