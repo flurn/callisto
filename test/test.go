@@ -18,7 +18,7 @@ var topic string = "test_topic_5"
 
 func Test() {
 	// load config
-	config.Load(config.AppServer)
+	config.Load(config.AppServer, "")
 
 	// setup logger and other utils
 	app.InitApp()

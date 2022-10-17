@@ -71,13 +71,17 @@ const (
 	ConsumerAsWorker ApplicationType = "CONSUMER_WORKER"
 )
 
-func Load(appType ApplicationType) {
+func Load(appType ApplicationType, configPath string) {
 	viper.SetDefault("APP_PORT", "8080")
 	viper.SetDefault("LOG_LEVEL", "error")
 	viper.SetConfigName("application")
-	viper.AddConfigPath("./")
-	viper.AddConfigPath("../")
-	viper.AddConfigPath("../../")
+	if configPath != "" {
+		viper.AddConfigPath(configPath)
+	} else {
+		viper.AddConfigPath("./")
+		viper.AddConfigPath("../")
+		viper.AddConfigPath("../../")
+	}
 	viper.SetConfigType("yaml")
 
 	viper.ReadInConfig()

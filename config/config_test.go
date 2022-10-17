@@ -8,7 +8,7 @@ import (
 )
 
 func TestShouldLoadConfigFromFile(t *testing.T) {
-	Load(AppServer)
+	Load(AppServer, "")
 
 	assert.NotNil(t, Port())
 	assert.NotEmpty(t, Log().LogLevel())
@@ -25,7 +25,7 @@ func TestShouldLoadConfigFromEnvironment(t *testing.T) {
 		assert.NoError(t, err, "unable to set os env for "+k)
 	}
 
-	Load(AppServer)
+	Load(AppServer, "")
 
 	assert.Equal(t, 8181, Port())
 	assert.Equal(t, "debug", Log().LogLevel())

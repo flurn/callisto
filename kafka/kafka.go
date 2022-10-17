@@ -19,7 +19,6 @@ type kafka struct {
 }
 
 func (kq *kafka) Push(ctx context.Context, msg []byte, topic string) error {
-
 	message := &k.Message{
 		TopicPartition: k.TopicPartition{Topic: &topic, Partition: k.PartitionAny},
 		Value:          msg,
