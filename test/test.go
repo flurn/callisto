@@ -29,7 +29,7 @@ func Test() {
 		Retry: &config.RetryConfig{
 			Type:       types.RetryTypeCustom,
 			MaxRetries: 5,
-			RetryFailedCallback: func(msg []byte, err error) {
+			ErrorCallback: func(msg []byte, err error) {
 				logger.Error("retry failed hook")
 			},
 		},

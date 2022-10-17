@@ -37,6 +37,10 @@ func (c *Consumer) fifoBackOff(fn func(msg []byte) error, msg *k.Message, rc *co
 		if backOff.GetRetryCounter() >= rc.MaxRetries {
 			logger.Errorf("Max retries reached for message: %s", string(msg.Value))
 
+			if rc.ErrorCallback != nil {
+				rc.ErrorCallback(msg.Value, err)
+			}
+
 			// move to DLQ
 			err := c.producer(c.topicName+types.DLQ_Postfix, msg.Value)
 			if err != nil {
@@ -56,7 +60,9 @@ func (c *Consumer) fifoBackOff(fn func(msg []byte) error, msg *k.Message, rc *co
 func (c *Consumer) ExponentialBackOff(fn func(msg []byte) error, msg *k.Message, rc *config.RetryConfig) error {
 	if rc.MaxRetries == 0 {
 		// move to DLQ
-		rc.RetryFailedCallback(msg.Value, fmt.Errorf("max retries reached"))
+		if rc.ErrorCallback != nil {
+			rc.ErrorCallback(msg.Value, fmt.Errorf("max retries reached"))
+		}
 		err := c.producer(c.topicName+types.DLQ_Postfix, msg.Value)
 		return err
 	}
@@ -81,7 +87,9 @@ func (c *Consumer) ExponentialBackOff(fn func(msg []byte) error, msg *k.Message,
 	err = c.producer(retryTopicName, retryMessageBytes)
 	if err != nil {
 		logger.Errorf("Failed to move message to retry topic %s, err: %v", retryTopicName, err)
-		rc.RetryFailedCallback(msg.Value, err)
+		if rc.ErrorCallback != nil {
+			rc.ErrorCallback(msg.Value, err)
+		}
 		return err
 	}
 

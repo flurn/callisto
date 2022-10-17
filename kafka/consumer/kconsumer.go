@@ -171,7 +171,9 @@ func (c *Consumer) runRetry(fn func(msg []byte) error, m *k.Message, retry *conf
 	err := json.Unmarshal(m.Value, retryMessageData)
 	if err != nil {
 		logger.Errorf("Failed to unmarshal retry message, err: %v", err)
-		retry.RetryFailedCallback(m.Value, err)
+		if retry.ErrorCallback != nil {
+			retry.ErrorCallback(m.Value, err)
+		}
 		return
 	}
 
@@ -185,14 +187,18 @@ func (c *Consumer) runRetry(fn func(msg []byte) error, m *k.Message, retry *conf
 		retryMessageData.RetryCounter++
 		if retryMessageData.RetryCounter > retry.MaxRetries {
 			// max retry reached
-			retry.RetryFailedCallback(m.Value, err)
+			if retry.ErrorCallback != nil {
+				retry.ErrorCallback(m.Value, err)
+			}
 
 			// move to dead letter topic
 			dlqTopicName := helper.GetDLQTopicName(c.topicName)
 			err = c.producer(dlqTopicName, retryMessageData.Message.Value)
 			if err != nil {
 				logger.Errorf("Failed to push message to DLQ topic: %s, err: %v", dlqTopicName, err)
-				retry.RetryFailedCallback(m.Value, err)
+				if retry.ErrorCallback != nil {
+					retry.ErrorCallback(m.Value, err)
+				}
 			}
 		} else {
 			nextRetryTopic := helper.GetNextRetryTopicName(c.topicName, retryMessageData.RetryCounter)
@@ -203,14 +209,18 @@ func (c *Consumer) runRetry(fn func(msg []byte) error, m *k.Message, retry *conf
 			nextRetryData, err := json.Marshal(retryMessageData)
 			if err != nil {
 				logger.Errorf("Failed to marshal retry message, err: %v", err)
-				retry.RetryFailedCallback(m.Value, err)
+				if retry.ErrorCallback != nil {
+					retry.ErrorCallback(m.Value, err)
+				}
 				return
 			}
 			// push to next retry topic
 			err = c.producer(nextRetryTopic, nextRetryData)
 			if err != nil {
 				logger.Errorf("Failed to push to retry topic, err: %v", err)
-				retry.RetryFailedCallback(m.Value, err)
+				if retry.ErrorCallback != nil {
+					retry.ErrorCallback(m.Value, err)
+				}
 			}
 		}
 	}
@@ -229,7 +239,9 @@ func (c *Consumer) runFunc(fn func(msg []byte) error, msg *k.Message, rc *config
 			// trigger failed retry callback
 			if err != nil {
 				logger.Errorf("Failed to retry message, err: %v", err)
-				rc.RetryFailedCallback(msg.Value, err)
+				if rc.ErrorCallback != nil {
+					rc.ErrorCallback(msg.Value, err)
+				}
 			}
 		} else {
 			// move to DLQ
