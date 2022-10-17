@@ -148,7 +148,7 @@ func CreateTopic(topicConfig *config.KafkaTopicConfig, kafkaConfig config.KafkaC
 			},
 			{
 				Topic:             helper.GetDLQTopicName(topicConfig.TopicName),
-				NumPartitions:     topicConfig.NumPartitions,
+				NumPartitions:     1,
 				ReplicationFactor: topicConfig.ReplicationFactor,
 			},
 		},

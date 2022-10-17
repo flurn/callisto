@@ -245,7 +245,7 @@ func (c *Consumer) runFunc(fn func(msg []byte) error, msg *k.Message, rc *config
 			}
 		} else {
 			// move to DLQ
-			err := c.producer(c.topicName+types.DLQ_Postfix, msg.Value)
+			err := c.producer(helper.GetDLQTopicName(c.topicName), msg.Value)
 			if err != nil {
 				logger.Errorf("Failed to move message to DLQ, err: %v", err)
 			}

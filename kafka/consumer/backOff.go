@@ -42,7 +42,7 @@ func (c *Consumer) fifoBackOff(fn func(msg []byte) error, msg *k.Message, rc *co
 			}
 
 			// move to DLQ
-			err := c.producer(c.topicName+types.DLQ_Postfix, msg.Value)
+			err := c.producer(helper.GetDLQTopicName(c.topicName), msg.Value)
 			if err != nil {
 				logger.Errorf("Failed to move message to DLQ, err: %v", err)
 			}
@@ -63,7 +63,7 @@ func (c *Consumer) ExponentialBackOff(fn func(msg []byte) error, msg *k.Message,
 		if rc.ErrorCallback != nil {
 			rc.ErrorCallback(msg.Value, fmt.Errorf("max retries reached"))
 		}
-		err := c.producer(c.topicName+types.DLQ_Postfix, msg.Value)
+		err := c.producer(helper.GetDLQTopicName(c.topicName), msg.Value)
 		return err
 	}
 
