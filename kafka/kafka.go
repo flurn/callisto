@@ -131,7 +131,7 @@ func CreateTopic(topicConfig *config.KafkaTopicConfig, kafkaConfig config.KafkaC
 	}
 
 	if topicConfig.ReplicationFactor == 0 {
-		topicConfig.ReplicationFactor = 2
+		topicConfig.ReplicationFactor = 3
 	}
 
 	if topicConfig.NumPartitions == 0 {
