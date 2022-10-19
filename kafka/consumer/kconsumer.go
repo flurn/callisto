@@ -28,18 +28,6 @@ const (
 	maxTimeout     = 10
 )
 
-type kafkaReader struct {
-	consumer *k.Consumer
-	context  context.Context
-	msg      chan *k.Message
-}
-
-type kafkaCommitter struct {
-	consumer *k.Consumer
-	context  context.Context
-	ack      chan *k.Message
-}
-
 type Consumer struct {
 	committer  *kafkaCommitter
 	reader     *kafkaReader
@@ -253,49 +241,6 @@ func (c *Consumer) runFunc(fn func(msg []byte) error, msg *k.Message, rc *config
 	}
 
 	ack <- msg
-}
-
-func (r *kafkaReader) Serve() {
-	for {
-		select {
-		case <-r.context.Done():
-			logger.Errorf("kafka message reader routine exiting")
-			return
-		default:
-			message, err := r.consumer.ReadMessage(-1)
-			if err != nil {
-				//logger.Errorf("kafka consumer failure %v", err)
-				continue
-			}
-
-			if message == nil {
-				continue
-			}
-			r.msg <- message
-		}
-	}
-}
-
-func (r *kafkaReader) Stop() {
-}
-
-func (c *kafkaCommitter) Serve() {
-	for {
-		select {
-		case <-c.context.Done():
-			logger.Error("kafka commit message routine exiting")
-			return
-		case message := <-c.ack:
-			_, err := c.consumer.CommitMessage(message)
-			if err != nil {
-				logger.Errorf("failed to commit offset %v", err)
-				logger.Debugf("failed to commit offset for message %v with error %v", message, err)
-			}
-		}
-	}
-}
-
-func (c *kafkaCommitter) Stop() {
 }
 
 func (c *Consumer) spawnReaderCommitter(ctx context.Context) (<-chan *k.Message, chan<- *k.Message) {
