@@ -60,6 +60,6 @@ func Test() {
 	}
 
 	wg := &sync.WaitGroup{}
-	consumer.StartMainAndRetryConsumers(*topicConfig, kafkaConfig, fn, topicConfig.Retry, wg)
+	consumer.StartMainAndRetryConsumers(*topicConfig, kafkaConfig, fn, wg)
 	wg.Wait()
 }

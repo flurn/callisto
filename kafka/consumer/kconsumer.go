@@ -95,21 +95,21 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig, 
 	}
 }
 
-func StartMainAndRetryConsumers(topicConfig config.KafkaTopicConfig, kafkaConfigProperty config.KafkaConfig, fn func(msg []byte) error, retry *config.RetryConfig, wg *sync.WaitGroup) {
+func StartMainAndRetryConsumers(topicConfig config.KafkaTopicConfig, kafkaConfigProperty config.KafkaConfig, fn func(msg []byte) error, wg *sync.WaitGroup) {
 	ctx := context.Background()
 	if topicConfig.Offset == "" {
 		topicConfig.Offset = types.OffsetTypeLatest
 	}
 	consumer := NewKafkaConsumer(topicConfig.TopicName, kafkaConfigProperty, topicConfig.Offset)
 	wg.Add(1)
-	go consumer.consume(ctx, 0, fn, wg, retry)
+	go consumer.consume(ctx, 0, fn, wg, topicConfig.Retry)
 
-	if retry != nil && retry.MaxRetries > 0 && retry.Type != types.RetryTypeFifo {
-		for i := 1; i <= retry.MaxRetries; i++ {
+	if topicConfig.Retry != nil && topicConfig.Retry.MaxRetries > 0 && topicConfig.Retry.Type != types.RetryTypeFifo {
+		for i := 1; i <= topicConfig.Retry.MaxRetries; i++ {
 			retryTopicName := helper.GetNextRetryTopicName(topicConfig.TopicName, i)
 			retryConsumer := NewKafkaConsumer(retryTopicName, kafkaConfigProperty, topicConfig.Offset)
 			wg.Add(1)
-			go retryConsumer.consume(ctx, i, fn, wg, retry)
+			go retryConsumer.consume(ctx, i, fn, wg, topicConfig.Retry)
 		}
 	}
 }
