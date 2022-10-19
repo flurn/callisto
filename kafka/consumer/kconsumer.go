@@ -46,10 +46,9 @@ func (c *Consumer) Close() {
 	}
 }
 
-func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) *Consumer {
-	offset := latestOffset
-	if kafkaConfigProperty.ConsumeOffset() == oldestOffset {
-		offset = oldestOffset
+func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig, offset types.OffsetType) *Consumer {
+	if offset == "" {
+		offset = types.OffsetTypeLatest
 	}
 
 	configMap := &k.ConfigMap{
@@ -60,7 +59,7 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 		"sasl.username":           kafkaConfigProperty.Username(),
 		"sasl.password":           kafkaConfigProperty.Password(),
 		"enable.auto.commit":      false,
-		"auto.offset.reset":       offset,
+		"auto.offset.reset":       string(offset),
 		"socket.keepalive.enable": true,
 	}
 
@@ -96,16 +95,19 @@ func NewKafkaConsumer(topicName string, kafkaConfigProperty config.KafkaConfig) 
 	}
 }
 
-func StartMainAndRetryConsumers(topicName string, kafkaConfigProperty config.KafkaConfig, fn func(msg []byte) error, retry *config.RetryConfig, wg *sync.WaitGroup) {
+func StartMainAndRetryConsumers(topicConfig config.KafkaTopicConfig, kafkaConfigProperty config.KafkaConfig, fn func(msg []byte) error, retry *config.RetryConfig, wg *sync.WaitGroup) {
 	ctx := context.Background()
-	consumer := NewKafkaConsumer(topicName, kafkaConfigProperty)
+	if topicConfig.Offset == "" {
+		topicConfig.Offset = types.OffsetTypeLatest
+	}
+	consumer := NewKafkaConsumer(topicConfig.TopicName, kafkaConfigProperty, topicConfig.Offset)
 	wg.Add(1)
 	go consumer.consume(ctx, 0, fn, wg, retry)
 
 	if retry != nil && retry.MaxRetries > 0 && retry.Type != types.RetryTypeFifo {
 		for i := 1; i <= retry.MaxRetries; i++ {
-			retryTopicName := helper.GetNextRetryTopicName(topicName, i)
-			retryConsumer := NewKafkaConsumer(retryTopicName, kafkaConfigProperty)
+			retryTopicName := helper.GetNextRetryTopicName(topicConfig.TopicName, i)
+			retryConsumer := NewKafkaConsumer(retryTopicName, kafkaConfigProperty, topicConfig.Offset)
 			wg.Add(1)
 			go retryConsumer.consume(ctx, i, fn, wg, retry)
 		}
