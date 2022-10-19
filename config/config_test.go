@@ -34,7 +34,6 @@ func TestShouldLoadConfigFromEnvironment(t *testing.T) {
 	assert.Equal(t, "localhost:9092", kc.BrokerList())
 	assert.Equal(t, 50, kc.MaxConnections())
 	assert.Equal(t, "public-txns", kc.TransactionalPublishTopic())
-	assert.Equal(t, "latest", kc.ConsumeOffset())
 	assert.Equal(t, "service-consumer-group", kc.ConsumerGroup())
 	assert.Equal(t, 1, kc.Workers())
 }

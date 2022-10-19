@@ -15,7 +15,6 @@ const (
 type KafkaConfig struct {
 	brokerList                string
 	keepAliveEnabled          bool
-	consumeOffset             string
 	consumerGroup             string
 	maxConnections            int
 	transactionalPublishTopic string
@@ -40,6 +39,7 @@ type KafkaTopicConfig struct {
 	NumPartitions       int
 	ConsumerMessagePSec int
 	ReplicationFactor   int
+	Offset              types.OffsetType
 }
 
 func (kc *KafkaConfig) Username() string {
@@ -64,10 +64,6 @@ func (kc KafkaConfig) MaxConnections() int {
 
 func (kc KafkaConfig) TransactionalPublishTopic() string {
 	return kc.transactionalPublishTopic
-}
-
-func (kc KafkaConfig) ConsumeOffset() string {
-	return kc.consumeOffset
 }
 
 func (kc KafkaConfig) ConsumerGroup() string {
@@ -112,7 +108,6 @@ func newKafkaConfig() KafkaConfig {
 		brokerList:                mustGetString("KAFKA_BROKER_LIST"),
 		maxConnections:            mustGetInt("KAFKA_MAX_CONNECTIONS"),
 		transactionalPublishTopic: mustGetString("KAFKA_TRANSACTIONAL_PUBLISH_TOPIC"),
-		consumeOffset:             mustGetString("KAFKA_CONSUME_OFFSET"),
 		consumerGroup:             mustGetString("KAFKA_CONSUMER_GROUP"),
 		workers:                   mustGetInt("KAFKA_WORKER_COUNT"),
 		lingerMs:                  mustGetInt("KAFKA_LINGER_MS"),
@@ -130,13 +125,12 @@ func consumerASWorkerConfig() KafkaConfig {
 		password:         mustGetString("KAFKA_CLUSTER_PASSWORD"),
 		brokerList:       mustGetString("CONS_KAFKA_BROKER_LIST"),
 		maxConnections:   mustGetInt("CONS_KAFKA_MAX_CONNECTIONS"),
-		consumeOffset:    mustGetString("CONS_KAFKA_CONSUME_OFFSET"),
 		consumerGroup:    mustGetString("CONS_KAFKA_CONSUMER_GROUP"),
 		workers:          mustGetInt("CONS_KAFKA_WORKER_COUNT"),
 		lingerMs:         mustGetInt("CONS_KAFKA_LINGER_MS"),
 		messageTimeoutMs: mustGetInt("CONS_KAFKA_MESSAGE_TIMEOUT_MS"),
 		messageBatchSize: mustGetInt("CONS_KAFKA_PUBLISH_BATCH_SIZE"),
-		retryBackoffMs:            mustGetInt("CONS_KAFKA_RETRY_BACKOFF_MS"),
+		retryBackoffMs:   mustGetInt("CONS_KAFKA_RETRY_BACKOFF_MS"),
 	}
 
 	return kc
